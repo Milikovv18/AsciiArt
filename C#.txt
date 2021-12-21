@@ -1,0 +1,104 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Drawing;
+
+namespace asciiConverter
+{
+    public class Program
+    {
+        public static void Main(string[] args)
+        {
+            List<double> WeightedChars = new List<double>();
+			List<char> Chars = new List<char>();
+            SizeF generalsize = new SizeF(0, 0);
+			
+            for (int i = 32; i <= 126; i++) // Iterate through contemplated characters calculating necessary width
+            {
+               char c = Convert.ToChar(i);
+               // Create a dummy bitmap just to get a graphics object
+               Image img = new Bitmap(1, 1);
+               Graphics drawing = Graphics.FromImage(img);
+    
+               // Measure the string to see its dimensions using the graphics object
+               SizeF textSize = drawing.MeasureString(c.ToString(), System.Drawing.SystemFonts.DefaultFont);
+               // Update, if necessary, the max width and height
+               if (textSize.Width > generalsize.Width)
+                   generalsize.Width = textSize.Width;
+               if (textSize.Height > generalsize.Height)
+                   generalsize.Height = textSize.Height;
+               // free all resources
+               img.Dispose();
+               drawing.Dispose();
+            }
+			
+            // Make sure generalsize is made of integers 
+            generalsize.Width = ((int)generalsize.Width);
+            generalsize.Height = ((int)generalsize.Height);
+            // and that size defines a square to maintain image proportions
+            if (generalsize.Width > generalsize.Height)
+                generalsize.Height = generalsize.Width;
+            else
+                generalsize.Width = generalsize.Height;
+            
+            for (char ch = (char)32; ch < (char)126; ++ch)
+            {
+                // Get char width for insertion point calculation purposes
+                Image dummy_img = new Bitmap(1, 1);
+                Graphics dummy_drawing = Graphics.FromImage(dummy_img);
+                SizeF textSize = dummy_drawing.MeasureString(ch.ToString(), System.Drawing.SystemFonts.DefaultFont);
+                dummy_img.Dispose();
+                dummy_drawing.Dispose();
+    
+                // Create a dummy bitmap just to get a graphics object
+                Image img = new Bitmap(1, 1);
+                Graphics drawing = Graphics.FromImage(img);
+    
+                // Free up resources taken by the dummy image and old graphics object
+                img.Dispose();
+                drawing.Dispose();
+    
+                // Create a new image of the right size
+                img = new Bitmap((int)generalsize.Width, (int)generalsize.Height);
+                // Get a graphics object
+                drawing = Graphics.FromImage(img);
+    
+                // Paint the background
+                drawing.Clear(Color.White);
+    
+                // Create a brush for the text
+                Brush textBrush = new SolidBrush(Color.Black);
+    
+                drawing.DrawString(ch.ToString(), System.Drawing.SystemFonts.DefaultFont, textBrush, (generalsize.Width - textSize.Width) / 2, 0);
+                drawing.Save();
+    
+                textBrush.Dispose();
+                drawing.Dispose();
+    
+                ///////////////////////////////////////////////
+                Bitmap btm = new Bitmap(img);
+                double totalsum = 0;
+    
+                for (int i = 0; i < btm.Width; i++)
+                {
+                    for (int j = 0; j < btm.Height; j++)
+                    {
+                        totalsum = totalsum + (btm.GetPixel(i, j).R 
+                                        + btm.GetPixel(i, j).G 
+                                        + btm.GetPixel(i, j).B)/3;
+                    }
+                }
+                WeightedChars.Add(totalsum / (generalsize.Height * generalsize.Width));
+				Chars.Add(ch);
+            }
+			
+            double max = WeightedChars.Max(c => c);
+      	    double min = WeightedChars.Min(c => c);
+      	    double slope = 255 / (max - min);
+        	double n = -min * slope;
+			
+			Chars = Chars.OrderBy(x => WeightedChars[x-32]).Reverse().ToList();
+			Console.WriteLine(String.Join("", Chars));
+        }
+    }
+}
